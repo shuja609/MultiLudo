@@ -2,6 +2,24 @@
 
 A modern implementation of the classic Ludo board game using C++, Raylib, and multithreading. This project demonstrates the use of threads, mutexes, and semaphores in a graphical game environment.
 
+## Table of Contents
+
+1. [Project Team](#project-team)
+2. [System Specifications](#system-specifications) 
+3. [Features](#features)
+4. [Project Structure](#project-structure)
+5. [Prerequisites](#prerequisites)
+   - [Required Packages](#required-packages)
+   - [Installing Raylib](#installing-raylib)
+6. [Building the Game](#building-the-game)
+7. [How to Play](#how-to-play)
+8. [Code Documentation](#code-documentation)
+   - [Key Components](#key-components)
+   - [Threading Model](#threading-model)
+9. [Troubleshooting](#troubleshooting)
+10. [Contributing](#contributing)
+11. [License](#license)
+12. [Acknowledgments](#acknowledgments)
 
 ## Project Team
 
@@ -111,6 +129,7 @@ cd MultiLudo
 chmod +x build.sh
 ./build.sh
 ```
+The game will be built and run automatically. Alternatively, you can run the game manually by navigating to the build directory and running the executable:
 
 3. Run the game:
 ```bash
