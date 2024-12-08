@@ -1,4 +1,8 @@
 #pragma once
+// - **Shuja Uddin** (22i-2553) | SE-D | FAST NUCES Islamabad
+// - **Amna Hassan** (22i-8759) | SE-D | FAST NUCES Islamabad  
+// - **Samra Saleem** (22i-2727) | SE-D | FAST NUCES Islamabad
+
 
 #include "raylib.h"
 #include <tuple>
