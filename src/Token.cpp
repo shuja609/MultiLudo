@@ -1,3 +1,9 @@
+/**
+ * @file Token.cpp
+ * @brief Implementation of the Token class for the Ludo game
+ * @details Contains the implementation of token movement, positioning, and game logic
+ */
+
 #include "../include/Token.h"
 #include "../include/Utils.h"
 #include <iostream>
@@ -5,6 +11,7 @@
 
 /**
  * @brief Default constructor initializes token state
+ * @details Initializes semaphore, position coordinates, and state flags to default values
  */
 Token::Token() {
     sem_init(&semToken, 0, 0);
@@ -18,8 +25,9 @@ Token::Token() {
 }
 
 /**
- * @brief Set token's texture and reset its state
- * @param t Texture to use for the token
+ * @brief Sets the token's texture and resets its state
+ * @param t The texture to be applied to the token
+ * @details Reinitializes all token properties and assigns the provided texture
  */
 void Token::setTexture(Texture2D t) {
     sem_init(&semToken, 0, 0);
@@ -34,16 +42,18 @@ void Token::setTexture(Texture2D t) {
 }
 
 /**
- * @brief Set token's starting position based on player ID
+ * @brief Sets the token's starting position based on player ID
  * @param i Player/Token ID (0-3)
+ * @throws std::invalid_argument if player ID is invalid
+ * @details Maps player IDs to specific board coordinates for initial positioning
  */
 void Token::setStart(int i) {
     id = i;
     switch (id) {
-        case 0: x = 60;  y = 360; break;
-        case 1: x = 480; y = 60;  break;
-        case 2: x = 780; y = 480; break;
-        case 3: x = 360; y = 780; break;
+        case 0: x = 60;  y = 360; break;  // Top player starting position
+        case 1: x = 480; y = 60;  break;  // Right player starting position
+        case 2: x = 780; y = 480; break;  // Bottom player starting position
+        case 3: x = 360; y = 780; break;  // Left player starting position
         default:
             throw std::invalid_argument("Invalid player ID");
     }
@@ -52,7 +62,9 @@ void Token::setStart(int i) {
 }
 
 /**
- * @brief Update token's grid position and check safety
+ * @brief Updates token's grid position and checks safety status
+ * @throws std::runtime_error if grid position is invalid
+ * @details Updates the global game grid with token's position and verifies safety status
  */
 void Token::updateGrid() {
     if (!isValidGridPosition(gridPos)) {
@@ -64,7 +76,8 @@ void Token::updateGrid() {
 }
 
 /**
- * @brief Draw token at its current or initial position
+ * @brief Renders token at its current or initial position
+ * @details Draws the token texture at appropriate coordinates based on game state
  */
 void Token::drawInit() {
     int drawX = isOut && !finished ? x : initX;
@@ -73,7 +86,8 @@ void Token::drawInit() {
 }
 
 /**
- * @brief Move token out of home onto the board
+ * @brief Moves token from home position onto the game board
+ * @details Updates token state, position, and grid coordinates when leaving home
  */
 void Token::outToken() {
     sem_post(&semToken);
@@ -84,7 +98,8 @@ void Token::outToken() {
 }
 
 /**
- * @brief Move token back to home position
+ * @brief Returns token to home position
+ * @details Resets token state and position to initial values
  */
 void Token::inToken() {
     sem_wait(&semToken);
@@ -94,8 +109,9 @@ void Token::inToken() {
 }
 
 /**
- * @brief Move token by specified number of steps
+ * @brief Moves token by specified number of steps
  * @param roll Number of steps to move
+ * @details Handles both normal path movement and home stretch movement based on token state
  */
 void Token::move(int roll) {
     if (roll == 0) return;
@@ -109,7 +125,10 @@ void Token::move(int roll) {
 }
 
 /**
- * @brief Check if token can move to the specified position
+ * @brief Checks if token can move to specified position
+ * @param newPos Target position tuple (grid, row, column)
+ * @return bool True if move is valid, false otherwise
+ * @details Validates position and checks for token collisions
  */
 bool Token::canMoveToPosition(const std::tuple<int, int, int>& newPos) const {
     // Check if position is valid
@@ -129,7 +148,9 @@ bool Token::canMoveToPosition(const std::tuple<int, int, int>& newPos) const {
 }
 
 /**
- * @brief Update token's screen position
+ * @brief Updates token's screen coordinates
+ * @param newX New x-coordinate
+ * @param newY New y-coordinate
  */
 void Token::updatePosition(int newX, int newY) {
     x = newX;
@@ -137,7 +158,9 @@ void Token::updatePosition(int newX, int newY) {
 }
 
 /**
- * @brief Handle movement in the home stretch
+ * @brief Handles token movement in the home stretch
+ * @param roll Number of steps to move
+ * @details Manages final approach to home position and completion state
  */
 void Token::handleHomeStretch(int roll) {
     auto [g, r, c] = gridPos;
@@ -153,7 +176,9 @@ void Token::handleHomeStretch(int roll) {
 }
 
 /**
- * @brief Handle movement on the normal path
+ * @brief Handles token movement on the normal path
+ * @param roll Number of steps to move
+ * @details Calculates movement across grid sections and manages transitions
  */
 void Token::handleNormalPath(int roll) {
     auto [g, r, c] = gridPos;
@@ -184,7 +209,9 @@ void Token::handleNormalPath(int roll) {
 }
 
 /**
- * @brief Validate if a grid position is valid
+ * @brief Validates if a grid position is valid
+ * @param pos Position tuple to validate
+ * @return bool True if position is valid, false otherwise
  */
 bool Token::isValidGridPosition(const std::tuple<int, int, int>& pos) const {
     auto [g, r, c] = pos;
@@ -193,7 +220,10 @@ bool Token::isValidGridPosition(const std::tuple<int, int, int>& pos) const {
 }
 
 /**
- * @brief Validate if a move is legal
+ * @brief Validates if a move is legal
+ * @param roll Dice roll value to validate
+ * @throws std::invalid_argument if dice roll is invalid
+ * @throws std::runtime_error if token movement is illegal
  */
 void Token::validateMove(int roll) const {
     if (roll < 0 || roll > 6) {
@@ -204,7 +234,14 @@ void Token::validateMove(int roll) const {
     }
 }
 
-// Private helper functions for grid-specific movement
+/**
+ * @brief Handles movement in grid section 0
+ * @param r Current row
+ * @param c Current column
+ * @param cur Current movement steps
+ * @param next Remaining movement steps
+ * @details Manages token movement and transitions in the top grid section
+ */
 void Token::handleGrid0Movement(int r, int c, int cur, int next) {
     switch (r) {
         case 0:
@@ -241,6 +278,14 @@ void Token::handleGrid0Movement(int r, int c, int cur, int next) {
     }
 }
 
+/**
+ * @brief Handles movement in grid section 1
+ * @param r Current row
+ * @param c Current column
+ * @param cur Current movement steps
+ * @param next Remaining movement steps
+ * @details Manages token movement and transitions in the right grid section
+ */
 void Token::handleGrid1Movement(int r, int c, int cur, int next) {
     switch (r) {
         case 0:
@@ -278,6 +323,14 @@ void Token::handleGrid1Movement(int r, int c, int cur, int next) {
     }
 }
 
+/**
+ * @brief Handles movement in grid section 2
+ * @param r Current row
+ * @param c Current column
+ * @param cur Current movement steps
+ * @param next Remaining movement steps
+ * @details Manages token movement and transitions in the bottom grid section
+ */
 void Token::handleGrid2Movement(int r, int c, int cur, int next) {
     switch (r) {
         case 0:
@@ -315,6 +368,14 @@ void Token::handleGrid2Movement(int r, int c, int cur, int next) {
     }
 }
 
+/**
+ * @brief Handles movement in grid section 3
+ * @param r Current row
+ * @param c Current column
+ * @param cur Current movement steps
+ * @param next Remaining movement steps
+ * @details Manages token movement and transitions in the left grid section
+ */
 void Token::handleGrid3Movement(int r, int c, int cur, int next) {
     switch (r) {
         case 0:

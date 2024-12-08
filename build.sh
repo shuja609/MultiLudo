@@ -1,24 +1,42 @@
 #!/bin/bash
 
+#------------------------------------------------------------------------------
+# MultiLudo Build Script
+# This script handles the build process for the MultiLudo game, including:
+# - Creating and managing build directory
+# - Generating build files with CMake
+# - Compiling the project
+# - Setting up game assets and permissions
+# - Launching the game
+#------------------------------------------------------------------------------
+
 # Create build directory if it doesn't exist
+# -p flag creates parent directories as needed
 mkdir -p build
 
-# Navigate to build directory
+# Navigate into the build directory for CMake operations
 cd build
 
-# Generate build files
+# Generate build files using CMake
+# .. specifies parent directory containing CMakeLists.txt
 cmake ..
 
-# Build the project
+# Compile the project using generated Makefile
+# This step builds all targets defined in CMake
 make
 
-# Copy assets
+# Copy game assets to build directory
+# -r flag copies directories recursively
 cp -r ../assets ./
 
-# Make the game executable
+# Set executable permissions for the game binary
+# +x adds execute permission for all users
 chmod +x MultiLudo
 
+# Notify user of build completion and launch game
 echo "Build complete. Starting game..."
+
+# Navigate to build directory and launch game
 cd build
 ./MultiLudo
 cd ..

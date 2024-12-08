@@ -1,40 +1,51 @@
-# Build directory
-build/
-bin/
+#------------------------------------------------------------------------------
+# Build and Binary Output Directories
+#------------------------------------------------------------------------------
+build/                  # CMake build directory
+bin/                    # Binary output directory
 
-# Raylib
-raylib/
+#------------------------------------------------------------------------------
+# External Dependencies
+#------------------------------------------------------------------------------
+raylib/                 # Raylib graphics library files
 
-# Prerequisites
-*.d
+#------------------------------------------------------------------------------
+# C/C++ Build Artifacts
+#------------------------------------------------------------------------------
+# Dependency files generated during compilation
+*.d                     # Dependency files for make
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# Object files from compilation
+*.slo                   # C++ static library object
+*.lo                    # C++ shared library object
+*.o                     # Object file
+*.obj                   # Object file (Windows)
 
-# Precompiled Headers
-*.gch
-*.pch
+# Header compilation artifacts
+*.gch                   # GCC precompiled header
+*.pch                   # Visual Studio precompiled header
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+# Dynamic libraries
+*.so                    # Shared object (Unix)
+*.dylib                # Dynamic library (macOS)
+*.dll                   # Dynamic-link library (Windows)
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+# Static libraries
+*.lai                   # Library automation information
+*.la                    # Libtool archive
+*.a                     # Static library (Unix)
+*.lib                   # Static library (Windows)
 
-# Executables
-*.exe
-*.out
-*.app
+#------------------------------------------------------------------------------
+# Executable Files
+#------------------------------------------------------------------------------
+*.exe                   # Windows executable
+*.out                   # Unix executable
+*.app                   # macOS application bundle
 
-# IDE specific files
-.vscode/
-.idea/
-*.swp
+#------------------------------------------------------------------------------
+# IDE and Editor Files
+#------------------------------------------------------------------------------
+.vscode/               # Visual Studio Code configuration
+.idea/                 # JetBrains IDE configuration
+*.swp                  # Vim swap files

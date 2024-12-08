@@ -1,20 +1,40 @@
+/**
+ * @file Game.cpp
+ * @brief Implementation of the Game class and related helper functions for the MultiLudo game
+ */
+
 #include "../include/Game.h"
 #include "../include/Utils.h"
 #include <iostream>
 #include <string>
 #include <cmath>
 
+// Mutex locks for thread synchronization
 extern pthread_mutex_t gameStateMutex;
 extern pthread_mutex_t diceRollMutex;
 extern pthread_mutex_t turnControlMutex;
 
-// Helper function for drawing centered text
+/**
+ * @brief Draws text centered horizontally on the screen
+ * @param text The text to draw
+ * @param y The vertical position
+ * @param fontSize The font size to use
+ * @param color The color to draw the text in
+ */
 void DrawCenteredText(const char* text, int y, int fontSize, Color color) {
     int textWidth = MeasureText(text, fontSize);
     DrawText(text, (1200 - textWidth) / 2, y, fontSize, color);
 }
 
-// Helper function for drawing gradient text
+/**
+ * @brief Draws text with a gradient color effect
+ * @param text The text to draw
+ * @param x The horizontal position
+ * @param y The vertical position 
+ * @param fontSize The font size to use
+ * @param color1 The starting color of the gradient
+ * @param color2 The ending color of the gradient
+ */
 void DrawGradientText(const char* text, int x, int y, int fontSize, Color color1, Color color2) {
     int letterSpacing = fontSize / 2;
     int currentX = x;
@@ -22,6 +42,7 @@ void DrawGradientText(const char* text, int x, int y, int fontSize, Color color1
     
     for (int i = 0; text[i] != '\0'; i++) {
         char letter[2] = {text[i], '\0'};
+        // Calculate blended color for each letter
         Color blendedColor = {
             (unsigned char)((1 - blendFactor) * color1.r + blendFactor * color2.r),
             (unsigned char)((1 - blendFactor) * color1.g + blendFactor * color2.g),
@@ -35,6 +56,11 @@ void DrawGradientText(const char* text, int x, int y, int fontSize, Color color1
     }
 }
 
+/**
+ * @brief Thread function for handling player moves
+ * @param args Pointer to the Player object
+ * @return NULL
+ */
 void* playerThread(void* args) {
     Player* p = (Player*)args;
     while (!WindowShouldClose()) {
@@ -46,8 +72,16 @@ void* playerThread(void* args) {
     return NULL;
 }
 
+/**
+ * @brief Constructor for Game class
+ * Initializes game state variables
+ */
 Game::Game() : screen(1), Initial(true), FinishedThreads(4, false), WinnerScreen(false) {}
 
+/**
+ * @brief Destructor for Game class
+ * Cleans up textures and closes window
+ */
 Game::~Game() {
     UnloadTexture(LudoBoard);
     for (int i = 0; i < 6; i++) {
@@ -57,6 +91,10 @@ Game::~Game() {
     CloseWindow();
 }
 
+/**
+ * @brief Loads the custom game font
+ * Falls back to default font if custom font fails to load
+ */
 void Game::LoadGameFont() {
     gameFont = LoadFont("assets/Roboto-Bold.ttf");
     if (gameFont.texture.id == 0) {
@@ -65,6 +103,9 @@ void Game::LoadGameFont() {
     }
 }
 
+/**
+ * @brief Initializes the game window and resources
+ */
 void Game::Initialize() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "MultiLudo - A Multithreaded Board Game");
     SetTargetFPS(60);
@@ -72,6 +113,9 @@ void Game::Initialize() {
     LoadTextures();
 }
 
+/**
+ * @brief Loads all game textures from files
+ */
 void Game::LoadTextures() {
     LudoBoard = LoadTexture("assets/board1.png");
     for (int i = 0; i < 6; i++) {
@@ -80,23 +124,31 @@ void Game::LoadTextures() {
     }
 }
 
+/**
+ * @brief Initializes players and creates player threads
+ * Sets up player tokens, colors and starts game threads
+ */
 void Game::InitializePlayers() {
     if (Initial && numTokens > 0) {
+        // Load player token textures
         Texture2D red = LoadTexture("assets/red-goti.png");
         Texture2D green = LoadTexture("assets/green-goti.png");
         Texture2D blue = LoadTexture("assets/blue-goti.png");
         Texture2D yellow = LoadTexture("assets/yellow-goti.png");
 
+        // Initialize players with colors and tokens
         P1.setPlayer(0, RED, red);
         P2.setPlayer(1, GREEN, green);
         P3.setPlayer(2, YELLOW, yellow);
         P4.setPlayer(3, BLUE, blue);
 
+        // Create player threads
         pthread_create(&th[0], NULL, &playerThread, &P1);
         pthread_create(&th[1], NULL, &playerThread, &P2);
         pthread_create(&th[2], NULL, &playerThread, &P3);
         pthread_create(&th[3], NULL, &playerThread, &P4);
 
+        // Set up initial game state
         GeneratePlayerTurns();
         turn = nextTurn[nextTurn.size() - 1];
         nextTurn.pop_back();
@@ -105,6 +157,10 @@ void Game::InitializePlayers() {
     }
 }
 
+/**
+ * @brief Draws text using the custom game font
+ * Falls back to default font if custom font is unavailable
+ */
 void Game::DrawTextEx(const char* text, int x, int y, int fontSize, Color color) {
     if (gameFont.texture.id != 0) {
         ::DrawTextEx(gameFont, text, (Vector2){(float)x, (float)y}, fontSize, 1, color);
@@ -113,13 +169,23 @@ void Game::DrawTextEx(const char* text, int x, int y, int fontSize, Color color)
     }
 }
 
-// Helper function for drawing centered text with custom font
+/**
+ * @brief Draws text centered horizontally using custom font
+ * @param game Pointer to Game instance
+ * @param text Text to draw
+ * @param y Vertical position
+ * @param fontSize Font size
+ * @param color Text color
+ */
 void DrawCenteredTextEx(Game* game, const char* text, int y, int fontSize, Color color) {
     Vector2 textSize = MeasureTextEx(game->gameFont, text, fontSize, 1);
     game->DrawTextEx(text, (Game::SCREEN_WIDTH - textSize.x) / 2, y, fontSize, color);
 }
 
-// Update the DrawScore method to use custom font
+/**
+ * @brief Draws the game scoreboard
+ * Displays player scores, current turn, and dice values
+ */
 void Game::DrawScore(int p1, int p2, int p3, int p4) {
     // Draw scoreboard background
     DrawRectangle(900, 0, 300, SCREEN_HEIGHT, RAYWHITE);
@@ -171,7 +237,10 @@ void Game::DrawScore(int p1, int p2, int p3, int p4) {
     DrawTextEx("Click token to move", 930, 670, 18, DARKGRAY);
 }
 
-// Update DrawStartScreen to use custom font
+/**
+ * @brief Draws the game start screen
+ * Displays title, token selection, and start button
+ */
 void Game::DrawStartScreen() {
     // Draw background
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
@@ -265,7 +334,10 @@ void Game::DrawStartScreen() {
     }
 }
 
-// Update DrawWinScreen to use custom font
+/**
+ * @brief Draws the game win screen
+ * Displays winners and rankings with animations
+ */
 void Game::DrawWinScreen() {
     // Draw background
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
@@ -347,10 +419,17 @@ void Game::DrawWinScreen() {
               25, Fade(DARKGRAY, blinkTime));
 }
 
+/**
+ * @brief Draws the current dice value
+ */
 void Game::DrawDice() {
     DrawTexture(Dice[dice - 1], 990, 500, WHITE);
 }
 
+/**
+ * @brief Updates the game state
+ * Handles player turns, completion checks, and game over conditions
+ */
 void Game::Update() {
     if (screen == 2) {
         DrawTexture(LudoBoard, 0, 0, WHITE);
@@ -360,6 +439,7 @@ void Game::Update() {
         int count = 0;
         int index = 0;
 
+        // Check and handle player completion states
         if (!P1.completed) P1.Start();
         else if (!FinishedThreads[0]) {
             pthread_cancel(th[0]);
@@ -400,6 +480,7 @@ void Game::Update() {
             FinishedThreads[3] = true;
         }
 
+        // Check for game completion
         for (int g = 0; g < 4; g++) {
             if (FinishedThreads[g] == true)
                 count++;
@@ -414,6 +495,10 @@ void Game::Update() {
     }
 }
 
+/**
+ * @brief Main game loop
+ * Handles drawing and updating game state
+ */
 void Game::Run() {
     while (!WindowShouldClose()) {
         BeginDrawing();
@@ -432,6 +517,7 @@ void Game::Run() {
         EndDrawing();
     }
 
+    // Clean up threads
     pthread_join(th[0], NULL);
     pthread_join(th[1], NULL);
     pthread_join(th[2], NULL);

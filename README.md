@@ -3,6 +3,13 @@
 A modern implementation of the classic Ludo board game using C++, Raylib, and multithreading. This project demonstrates the use of threads, mutexes, and semaphores in a graphical game environment.
 
 
+## Project Team
+
+- **Shuja Uddin** (22i-2553) | SE-D | FAST NUCES Islamabad
+- **Amna Hassan** (22i-8759) | SE-D | FAST NUCES Islamabad  
+- **Samra Saleem** (22i-2727) | SE-D | FAST NUCES Islamabad
+
+
 ## System Specifications
 
 - **Device**: Dell Inspiron 15-5510
@@ -95,7 +102,7 @@ sudo make install
 
 1. Clone the repository:
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/shuja609/MultiLudo.git
 cd MultiLudo
 ```
 

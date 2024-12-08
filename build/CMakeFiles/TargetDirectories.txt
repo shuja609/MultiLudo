@@ -1,0 +1,3 @@
+/home/shuja-uddin/MultiLudo/build/CMakeFiles/MultiLudo.dir
+/home/shuja-uddin/MultiLudo/build/CMakeFiles/edit_cache.dir
+/home/shuja-uddin/MultiLudo/build/CMakeFiles/rebuild_cache.dir
