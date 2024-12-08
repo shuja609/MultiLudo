@@ -97,7 +97,7 @@ void Game::InitializePlayers() {
         pthread_create(&th[2], NULL, &playerThread, &P3);
         pthread_create(&th[3], NULL, &playerThread, &P4);
 
-        GenerateTurns();
+        GeneratePlayerTurns();
         turn = nextTurn[nextTurn.size() - 1];
         nextTurn.pop_back();
         

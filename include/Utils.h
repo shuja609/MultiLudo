@@ -16,13 +16,13 @@ extern std::vector<int> nextTurn;
 extern std::vector<int> winners;
 
 bool isTokenSafe(std::tuple<int, int, int> g);
-void GenerateTurns();
+void GeneratePlayerTurns();
 int getTurn();
 
-bool initializeGrid();
-void cleanupGrid();
+bool initializeGridBoard();
+void cleanupGridBoard();
 
-void resetDice();
-void updateDiceValue(int value);
+void resetDiceValue();
+void newDiceNumber(int value);
 
-void resetGameState(); 
+void resetcompleteGame(); 

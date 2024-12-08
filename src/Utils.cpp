@@ -59,7 +59,7 @@ bool isTokenSafe(std::tuple<int, int, int> g) {
     }
 }
 
-void GenerateTurns() {
+void GeneratePlayerTurns() {
     try {
         nextTurn.clear();
         nextTurn.resize(4);
@@ -80,7 +80,7 @@ void GenerateTurns() {
 int getTurn() {
     try {
         if (nextTurn.empty()) {
-            GenerateTurns();
+            GeneratePlayerTurns();
         }
 
         // Get next available player
@@ -95,7 +95,7 @@ int getTurn() {
 
             // If we've used all turns, regenerate
             if (nextTurn.empty()) {
-                GenerateTurns();
+                GeneratePlayerTurns();
             }
         }
 
@@ -115,7 +115,7 @@ int getTurn() {
 }
 
 // Grid management functions
-bool initializeGrid() {
+bool initializeGridBoard() {
     try {
         if (numTokens <= 0 || numTokens > 4) {
             throw std::invalid_argument("Invalid number of tokens");
@@ -132,12 +132,12 @@ bool initializeGrid() {
     }
     catch (const std::exception& e) {
         std::cerr << "Error initializing grid: " << e.what() << std::endl;
-        cleanupGrid();
+        cleanupGridBoard();
         return false;
     }
 }
 
-void cleanupGrid() {
+void cleanupGridBoard() {
     if (LudoGrid != nullptr) {
         for (int i = 0; i < 4; i++) {
             delete[] LudoGrid[i];
@@ -148,14 +148,14 @@ void cleanupGrid() {
 }
 
 // Dice management functions
-void resetDice() {
+void resetDiceValue() {
     diceVal.clear();
     diceVal.resize(3, 0);
     diceCount = 0;
     dice = 1;
 }
 
-void updateDiceValue(int value) {
+void newDiceNumber(int value) {
     if (value >= 1 && value <= 6) {
         dice = value;
         if (diceCount < 3) {
@@ -165,12 +165,12 @@ void updateDiceValue(int value) {
 }
 
 // Game state management
-void resetGameState() {
+void resetcompleteGame() {
     movePlayer = false;
     moveDice = true;
     turn = 1;
     lastTurn = turn;
     nextTurn.clear();
     winners.clear();
-    resetDice();
+    resetDiceValue();
 } 
