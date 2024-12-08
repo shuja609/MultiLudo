@@ -17,4 +17,12 @@ extern std::vector<int> winners;
 
 bool isTokenSafe(std::tuple<int, int, int> g);
 void GenerateTurns();
-int getTurn(); 
+int getTurn();
+
+bool initializeGrid();
+void cleanupGrid();
+
+void resetDice();
+void updateDiceValue(int value);
+
+void resetGameState(); 
