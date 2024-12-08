@@ -18,4 +18,7 @@ cp -r ../assets ./
 # Make the game executable
 chmod +x MultiLudo
 
-echo "Build complete. Run ./MultiLudo to start the game." 
+echo "Build complete. Starting game..."
+cd build
+./MultiLudo
+cd ..
