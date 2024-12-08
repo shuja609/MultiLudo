@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <iostream>
 
-extern pthread_mutex_t mutexDice;
-extern pthread_mutex_t mutexTurn;
+extern pthread_mutex_t diceRollMutex;
+extern pthread_mutex_t turnControlMutex;
 
 Player::Player() : tokens(nullptr), score(0), completed(false), isPlaying(false) {}
 
@@ -141,11 +141,11 @@ void Player::collision(int movedToken) {
 
 void Player::rollDice() {
     if (moveDice == true) {
-        pthread_mutex_lock(&mutexDice);
+        pthread_mutex_lock(&diceRollMutex);
         if (id == turn - 1 && movePlayer == false && !completed) {
             if (completed) {
                 turn = getTurn();
-                pthread_mutex_unlock(&mutexDice);
+                pthread_mutex_unlock(&diceRollMutex);
                 return;
             }
             Rectangle diceRec = {990, 500, 108.0, 108.0};
@@ -155,20 +155,20 @@ void Player::rollDice() {
                         dice = (rand() % 6) + 1;
                         diceCount++;
                         if (diceCount == 3 && dice == 6) {
-                            pthread_mutex_lock(&mutexTurn);
+                            pthread_mutex_lock(&turnControlMutex);
                             diceVal.resize(3);
                             std::fill(diceVal.begin(), diceVal.end(), 0);
                             turn = getTurn();
                             diceCount = 0;
                             lastTurn = turn;
-                            pthread_mutex_unlock(&mutexTurn);
-                            pthread_mutex_unlock(&mutexDice);
+                            pthread_mutex_unlock(&turnControlMutex);
+                            pthread_mutex_unlock(&diceRollMutex);
                             return;
                         }
                         if (dice == 6) {
                             diceVal[diceCount - 1] = dice;
                             lastTurn = turn;
-                            pthread_mutex_unlock(&mutexDice);
+                            pthread_mutex_unlock(&diceRollMutex);
                             return;
                         }
                         else {
@@ -177,16 +177,16 @@ void Player::rollDice() {
                                 movePlayer = true;
                                 moveDice = false;
                                 lastTurn = turn;
-                                pthread_mutex_unlock(&mutexDice);
+                                pthread_mutex_unlock(&diceRollMutex);
                                 return;
                             }
                             else {
-                                pthread_mutex_lock(&mutexTurn);
+                                pthread_mutex_lock(&turnControlMutex);
                                 diceVal.resize(3);
                                 std::fill(diceVal.begin(), diceVal.end(), 0);
                                 turn = getTurn();
                                 lastTurn = turn;
-                                pthread_mutex_unlock(&mutexTurn);
+                                pthread_mutex_unlock(&turnControlMutex);
                             }
                             diceCount = 0;
                         }
@@ -194,7 +194,7 @@ void Player::rollDice() {
                 }
             }
         }
-        pthread_mutex_unlock(&mutexDice);
+        pthread_mutex_unlock(&diceRollMutex);
     }
 }
 
@@ -224,7 +224,7 @@ void Player::move() {
                         collision(i);
                         diceVal.erase(diceVal.begin());
                         if (diceVal.empty() || diceVal[0] == 0) {
-                            pthread_mutex_lock(&mutexTurn);
+                            pthread_mutex_lock(&turnControlMutex);
                             turn = getTurn();
                             lastTurn = turn;
                             diceVal.resize(3);
@@ -232,7 +232,7 @@ void Player::move() {
                             movePlayer = false;
                             moveDice = true;
                             diceCount = 0;
-                            pthread_mutex_unlock(&mutexTurn);
+                            pthread_mutex_unlock(&turnControlMutex);
                         }
                     }
                 }

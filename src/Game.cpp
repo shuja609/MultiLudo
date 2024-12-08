@@ -4,9 +4,9 @@
 #include <string>
 #include <cmath>
 
-extern pthread_mutex_t mutex;
-extern pthread_mutex_t mutexDice;
-extern pthread_mutex_t mutexTurn;
+extern pthread_mutex_t gameStateMutex;
+extern pthread_mutex_t diceRollMutex;
+extern pthread_mutex_t turnControlMutex;
 
 // Helper function for drawing centered text
 void DrawCenteredText(const char* text, int y, int fontSize, Color color) {
@@ -38,10 +38,10 @@ void DrawGradientText(const char* text, int x, int y, int fontSize, Color color1
 void* playerThread(void* args) {
     Player* p = (Player*)args;
     while (!WindowShouldClose()) {
-        pthread_mutex_lock(&mutex);
+        pthread_mutex_lock(&gameStateMutex);
         p->rollDice();
         p->move();
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&gameStateMutex);
     }
     return NULL;
 }
