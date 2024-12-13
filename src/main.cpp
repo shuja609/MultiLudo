@@ -1,122 +1,81 @@
-
-// - **Shuja Uddin** (22i-2553) | SE-D | FAST NUCES Islamabad
-// - **Amna Hassan** (22i-8759) | SE-D | FAST NUCES Islamabad  
-// - **Samra Saleem** (22i-2727) | SE-D | FAST NUCES Islamabad
-
-
-
-
 /**
  * @file main.cpp
- * @brief Entry point for the multiplayer Ludo board game implementation
- * @details This file implements the core game initialization, thread management,
- * and synchronization mechanisms. The game architecture uses multiple threads
- * to handle concurrent player turns while maintaining thread safety through
- * mutex-based synchronization.
- * @author Your Name
- * @date YYYY-MM-DD
+ * @brief Main entry point for the Ludo game application
+ *
+ * This file contains the main game initialization, thread management,
+ * and program entry point for a multi-threaded Ludo board game implementation.
+ *
+ * @authors
+ * - Shuja Uddin (22i2553)
+ * - Amna Hassan (22i8759) 
+ * - Samra Saleem (22i----)
  */
 
 #include "../include/Game.h"
 #include <cstdlib>
 #include <ctime>
-#include <iostream>
 
 /**
- * @brief Mutex for protecting shared game state access
- * @details Controls concurrent access to game variables and state that
- * could be modified by multiple threads simultaneously
+ * @brief Global mutex for protecting shared game state
+ * Used to synchronize access to game board and player states
  */
-pthread_mutex_t gameStateMutex;
+pthread_mutex_t mutex;
 
 /**
- * @brief Mutex for dice rolling mechanism
- * @details Ensures atomic dice roll operations when multiple players
- * attempt to roll dice concurrently
+ * @brief Global mutex for protecting dice rolling
+ * Ensures atomic dice roll operations between threads
  */
-pthread_mutex_t diceRollMutex;
+pthread_mutex_t mutexDice;
 
 /**
- * @brief Mutex for turn management
- * @details Controls player turn transitions and prevents race conditions
- * in turn-based gameplay mechanics
+ * @brief Global mutex for protecting turn management
+ * Controls player turn order and prevents simultaneous turns
  */
-pthread_mutex_t turnControlMutex;
+pthread_mutex_t mutexTurn;
 
 /**
- * @brief Main game controller thread function
- * @param gameInstance Pointer to the main Game object instance
- * @return void* Required by pthread API, always returns nullptr
- * @throws None
- * @details This function executes in a dedicated thread and manages the primary
- * game loop. It handles:
- * - Game system initialization
- * - Resource loading
- * - Main game loop execution
- * - Game state management
+ * @brief Master thread function that controls the main game loop
+ *
+ * Initializes the game state and runs the main game loop in a separate thread.
+ * This allows for concurrent handling of player actions and game state updates.
+ *
+ * @param args Pointer to Game instance cast as void*
+ * @return NULL on completion
  */
-void* GameController(void* gameInstance) {
-    Game* gamePtr = static_cast<Game*>(gameInstance);
-    
-    // Initialize core game systems and load resources
-    gamePtr->Initialize();
-    
-    // Enter main game loop
-    gamePtr->Run();
-    
-    return nullptr;
+void* Master(void* args) {
+    Game* game = (Game*)args;
+    game->Initialize();
+    game->Run();
+    return NULL;
 }
 
 /**
- * @brief Program entry point
- * @return int Exit status (0 for success, 1 for initialization failure)
- * @details Main function responsible for:
- * - Initializing random number generator
- * - Setting up synchronization primitives
- * - Creating and managing the game controller thread
- * - Proper cleanup of resources
- * 
- * The function implements proper error handling for thread and mutex initialization,
- * ensuring clean shutdown in case of failures.
+ * @brief Main program entry point
+ *
+ * Initializes the random number generator, creates and manages the game threads,
+ * and handles proper cleanup of system resources.
+ *
+ * @return 0 on successful execution
  */
-int main() {
-    // Seed random number generator with current timestamp
-    srand(static_cast<unsigned int>(time(nullptr)));
+int main(void) {
+    // Seed random number generator for dice rolls
+    srand(time(NULL));
     
-    // Initialize mutex objects with error handling
-    if (pthread_mutex_init(&gameStateMutex, nullptr) != 0) {
-        std::cerr << "Error: Failed to initialize game state mutex" << std::endl;
-        return 1;
-    }
-    if (pthread_mutex_init(&diceRollMutex, nullptr) != 0) {
-        std::cerr << "Error: Failed to initialize dice roll mutex" << std::endl;
-        pthread_mutex_destroy(&gameStateMutex); // Clean up previously initialized mutex
-        return 1;
-    }
-    if (pthread_mutex_init(&turnControlMutex, nullptr) != 0) {
-        std::cerr << "Error: Failed to initialize turn control mutex" << std::endl;
-        pthread_mutex_destroy(&gameStateMutex); // Clean up previously initialized mutexes
-        pthread_mutex_destroy(&diceRollMutex);
-        return 1;
-    }
+    // Initialize synchronization mutexes
+    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&mutexDice, NULL);
+    pthread_mutex_init(&mutexTurn, NULL);
     
-    // Instantiate main game object
-    Game gameInstance;
+    // Create and start the master game thread
+    Game game;
+    pthread_t masterThread;
+    pthread_create(&masterThread, NULL, &Master, &game);
+    pthread_join(masterThread, NULL);
     
-    // Create and launch game controller thread
-    pthread_t controllerThread;
-    if (pthread_create(&controllerThread, nullptr, &GameController, &gameInstance) != 0) {
-        std::cerr << "Error: Failed to create game controller thread" << std::endl;
-        return 1;
-    }
-    
-    // Block until game controller thread completes execution
-    pthread_join(controllerThread, nullptr);
-    
-    // Clean up synchronization primitives
-    pthread_mutex_destroy(&gameStateMutex);
-    pthread_mutex_destroy(&diceRollMutex);
-    pthread_mutex_destroy(&turnControlMutex);
+    // Cleanup and destroy mutexes
+    pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&mutexDice);
+    pthread_mutex_destroy(&mutexTurn);
     
     return 0;
 }

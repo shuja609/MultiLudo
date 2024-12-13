@@ -1,13 +1,6 @@
-// - **Shuja Uddin** (22i-2553) | SE-D | FAST NUCES Islamabad
-// - **Amna Hassan** (22i-8759) | SE-D | FAST NUCES Islamabad  
-// - **Samra Saleem** (22i-2727) | SE-D | FAST NUCES Islamabad
-
-
-
-
 /**
  * @file Game.cpp
- * @brief Implementation of the Game class and related helper functions for the MultiLudo game
+ * @brief Implementation of the Game class and related helper functions for the MultiLudo board game
  */
 
 #include "../include/Game.h"
@@ -17,16 +10,16 @@
 #include <cmath>
 
 // Mutex locks for thread synchronization
-extern pthread_mutex_t gameStateMutex;
-extern pthread_mutex_t diceRollMutex;
-extern pthread_mutex_t turnControlMutex;
+extern pthread_mutex_t mutex;        // General game state mutex
+extern pthread_mutex_t mutexDice;    // Dice rolling mutex  
+extern pthread_mutex_t mutexTurn;    // Turn management mutex
 
 /**
  * @brief Draws text centered horizontally on the screen
  * @param text The text to draw
  * @param y The vertical position
- * @param fontSize The font size to use
- * @param color The color to draw the text in
+ * @param fontSize Size of the font
+ * @param color Color of the text
  */
 void DrawCenteredText(const char* text, int y, int fontSize, Color color) {
     int textWidth = MeasureText(text, fontSize);
@@ -38,9 +31,9 @@ void DrawCenteredText(const char* text, int y, int fontSize, Color color) {
  * @param text The text to draw
  * @param x The horizontal position
  * @param y The vertical position 
- * @param fontSize The font size to use
- * @param color1 The starting color of the gradient
- * @param color2 The ending color of the gradient
+ * @param fontSize Size of the font
+ * @param color1 Starting color of the gradient
+ * @param color2 Ending color of the gradient
  */
 void DrawGradientText(const char* text, int x, int y, int fontSize, Color color1, Color color2) {
     int letterSpacing = fontSize / 2;
@@ -64,17 +57,17 @@ void DrawGradientText(const char* text, int x, int y, int fontSize, Color color1
 }
 
 /**
- * @brief Thread function for handling player moves
- * @param args Pointer to the Player object
+ * @brief Thread function for handling player actions
+ * @param args Pointer to Player object
  * @return NULL
  */
 void* playerThread(void* args) {
     Player* p = (Player*)args;
     while (!WindowShouldClose()) {
-        pthread_mutex_lock(&gameStateMutex);
+        pthread_mutex_lock(&mutex);
         p->rollDice();
         p->move();
-        pthread_mutex_unlock(&gameStateMutex);
+        pthread_mutex_unlock(&mutex);
     }
     return NULL;
 }
@@ -87,7 +80,7 @@ Game::Game() : screen(1), Initial(true), FinishedThreads(4, false), WinnerScreen
 
 /**
  * @brief Destructor for Game class
- * Cleans up textures and closes window
+ * Cleans up resources and closes the window
  */
 Game::~Game() {
     UnloadTexture(LudoBoard);
@@ -111,7 +104,7 @@ void Game::LoadGameFont() {
 }
 
 /**
- * @brief Initializes the game window and resources
+ * @brief Initializes the game window and core components
  */
 void Game::Initialize() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "MultiLudo - A Multithreaded Board Game");
@@ -121,7 +114,7 @@ void Game::Initialize() {
 }
 
 /**
- * @brief Loads all game textures from files
+ * @brief Loads all game textures from assets
  */
 void Game::LoadTextures() {
     LudoBoard = LoadTexture("assets/board1.png");
@@ -133,7 +126,7 @@ void Game::LoadTextures() {
 
 /**
  * @brief Initializes players and creates player threads
- * Sets up player tokens, colors and starts game threads
+ * Sets up player tokens, colors and starts the game threads
  */
 void Game::InitializePlayers() {
     if (Initial && numTokens > 0) {
@@ -143,20 +136,20 @@ void Game::InitializePlayers() {
         Texture2D blue = LoadTexture("assets/blue-goti.png");
         Texture2D yellow = LoadTexture("assets/yellow-goti.png");
 
-        // Initialize players with colors and tokens
+        // Initialize players with their colors and tokens
         P1.setPlayer(0, RED, red);
         P2.setPlayer(1, GREEN, green);
         P3.setPlayer(2, YELLOW, yellow);
         P4.setPlayer(3, BLUE, blue);
 
-        // Create player threads
+        // Create threads for each player
         pthread_create(&th[0], NULL, &playerThread, &P1);
         pthread_create(&th[1], NULL, &playerThread, &P2);
         pthread_create(&th[2], NULL, &playerThread, &P3);
         pthread_create(&th[3], NULL, &playerThread, &P4);
 
-        // Set up initial game state
-        GeneratePlayerTurns();
+        // Set up initial turn order
+        GenerateTurns();
         turn = nextTurn[nextTurn.size() - 1];
         nextTurn.pop_back();
         
@@ -165,8 +158,8 @@ void Game::InitializePlayers() {
 }
 
 /**
- * @brief Draws text using the custom game font
- * Falls back to default font if custom font is unavailable
+ * @brief Draws text using the custom font
+ * Falls back to default DrawText if custom font isn't loaded
  */
 void Game::DrawTextEx(const char* text, int x, int y, int fontSize, Color color) {
     if (gameFont.texture.id != 0) {
@@ -192,156 +185,119 @@ void DrawCenteredTextEx(Game* game, const char* text, int y, int fontSize, Color
 /**
  * @brief Draws the game scoreboard
  * Displays player scores, current turn, and dice values
+ * @param p1 Score for player 1
+ * @param p2 Score for player 2
+ * @param p3 Score for player 3
+ * @param p4 Score for player 4
  */
 void Game::DrawScore(int p1, int p2, int p3, int p4) {
-    // Draw scoreboard panel with gradient background
-    DrawRectangleGradientV(900, 0, 300, SCREEN_HEIGHT, RAYWHITE, Fade(LIGHTGRAY, 0.2f));
-    DrawRectangleLinesEx((Rectangle){900, 0, 300, (float)SCREEN_HEIGHT}, 3, DARKGRAY);
+    // Draw scoreboard background
+    DrawRectangle(900, 0, 300, SCREEN_HEIGHT, RAYWHITE);
+    DrawRectangleLinesEx((Rectangle){900, 0, 300, (float)SCREEN_HEIGHT}, 2, LIGHTGRAY);
 
-    // Draw decorative header
-    DrawRectangleGradientH(900, 0, 300, 70, Fade(BLUE, 0.2f), Fade(RED, 0.2f));
-    DrawTextEx("SCOREBOARD", 950, 20, 35, DARKGRAY);
-    DrawLine(920, 70, 1180, 70, DARKGRAY);
+    // Draw scoreboard title
+    DrawTextEx("SCOREBOARD", 950, 20, 30, DARKGRAY);
+    DrawLine(920, 60, 1180, 60, LIGHTGRAY);
 
-    // Draw player scores with enhanced styling
+    // Draw player scores with colored rectangles
     const char* playerNames[] = {"RED", "GREEN", "YELLOW", "BLUE"};
     int scores[] = {p1, p2, p3, p4};
     Color colors[] = {RED, GREEN, YELLOW, BLUE};
     
     for (int i = 0; i < 4; i++) {
-        float yPos = 90 + i * 60;
-        // Draw score panel with gradient
-        DrawRectangleGradientH(920, (int)yPos, 240, 45, Fade(colors[i], 0.1f), Fade(colors[i], 0.3f));
-        DrawRectangleLinesEx((Rectangle){920, yPos, 240, 45}, 2, colors[i]);
-        
-        // Draw player name and score with shadow effect
-        DrawTextEx(playerNames[i], 932, (int)yPos + 12, 24, Fade(BLACK, 0.2f));
-        DrawTextEx(playerNames[i], 930, (int)yPos + 10, 24, colors[i]);
-        
-        DrawTextEx(TextFormat("%d", scores[i]), 1122, (int)yPos + 12, 24, Fade(BLACK, 0.2f));
-        DrawTextEx(TextFormat("%d", scores[i]), 1120, (int)yPos + 10, 24, DARKGRAY);
+        float yPos = 80 + i * 50;
+        DrawRectangle(920, (int)yPos, 240, 35, Fade(colors[i], 0.2f));
+        DrawRectangleLinesEx((Rectangle){920, yPos, 240, 35}, 1, colors[i]);
+        DrawTextEx(playerNames[i], 930, (int)yPos + 8, 20, colors[i]);
+        DrawTextEx(TextFormat("%d", scores[i]), 1120, (int)yPos + 8, 20, DARKGRAY);
     }
 
-    // Draw current turn section with enhanced styling
-    DrawRectangleGradientH(900, 280, 300, 120, Fade(LIGHTGRAY, 0.1f), Fade(LIGHTGRAY, 0.3f));
-    //DrawTextEx("CURRENT TURN", 950, 290, 28, DARKGRAY);
-    DrawLine(920, 325, 1180, 325, DARKGRAY);
+    // Draw current turn indicator
+    DrawTextEx("CURRENT TURN", 950, 290, 25, DARKGRAY);
+    DrawLine(920, 325, 1180, 325, LIGHTGRAY);
     
     Color turnColor = colors[turn - 1];
-    DrawRectangleGradientH(920, 335, 240, 50, Fade(turnColor, 0.2f), Fade(turnColor, 0.4f));
-    DrawRectangleLinesEx((Rectangle){920, 335, 240, 50}, 2, turnColor);
-    DrawTextEx(playerNames[turn - 1], 952, 347, 32, Fade(BLACK, 0.2f));
-    DrawTextEx(playerNames[turn - 1], 950, 345, 32, turnColor);
+    DrawRectangle(920, 335, 240, 45, Fade(turnColor, 0.3f));
+    DrawTextEx(playerNames[turn - 1], 950, 345, 30, turnColor);
 
-    // Draw dice values section with enhanced styling
-    DrawRectangleGradientH(900, 410, 300, 200, Fade(LIGHTGRAY, 0.1f), Fade(LIGHTGRAY, 0.3f));
-    DrawTextEx("DICE VALUES", 950, 420, 28, DARKGRAY);
-    DrawLine(920, 455, 1180, 455, DARKGRAY);
+    // Draw dice values section
+    DrawTextEx("DICE VALUES", 950, 400, 25, DARKGRAY);
+    DrawLine(920, 435, 1180, 435, LIGHTGRAY);
     
-    // Draw dice values in a grid layout
-    int diceValueY = 470;
+    // Draw dice values in a more compact way
+    int diceValueY = 445;
     for (unsigned int i = 0; i < diceVal.size(); i++) {
         if (diceVal[i] != 0) {
-            int x = 930 + ((i % 3) * 60); // Reduced spacing between dice
-            int y = diceValueY + ((i / 3) * 45); // Reduced vertical spacing
-            DrawRectangleGradientV(x, y, 45, 35, WHITE, Fade(LIGHTGRAY, 0.5f)); // Smaller rectangle
-            DrawRectangleLinesEx((Rectangle){(float)x, (float)y, 45, 35}, 2, DARKGRAY); // Smaller border
-            DrawTextEx(TextFormat("%d", diceVal[i]), x + 15, y + 8, 22, DARKGRAY); // Smaller text and adjusted position
+            DrawRectangle(930 + (i * 60), diceValueY, 50, 50, LIGHTGRAY);
+            DrawTextEx(TextFormat("%d", diceVal[i]), 947 + (i * 60), diceValueY + 15, 25, DARKGRAY);
         }
     }
 
-    // Draw instructions panel with enhanced styling
-    DrawRectangleGradientV(920, 620, 260, 80, Fade(LIGHTGRAY, 0.2f), Fade(LIGHTGRAY, 0.4f));
-    DrawRectangleLinesEx((Rectangle){920, 620, 260, 80}, 2, DARKGRAY);
-    DrawTextEx("INSTRUCTIONS", 950, 625, 22, DARKGRAY);
-    DrawTextEx("• Click dice to roll", 930, 650, 20, DARKGRAY);
-    DrawTextEx("• Click token to move", 930, 670, 20, DARKGRAY);
+    // Draw instructions
+    DrawRectangle(920, 620, 260, 70, Fade(LIGHTGRAY, 0.3f));
+    DrawRectangleLinesEx((Rectangle){920, 620, 260, 70}, 1, DARKGRAY);
+    DrawTextEx("INSTRUCTIONS", 950, 625, 20, DARKGRAY);
+    DrawTextEx("Click dice to roll", 930, 650, 18, DARKGRAY);
+    DrawTextEx("Click token to move", 930, 670, 18, DARKGRAY);
 }
 
 /**
  * @brief Draws the game start screen
- * Displays title, token selection, and start button
+ * Handles token selection and game start
  */
 void Game::DrawStartScreen() {
-    // Draw enhanced gradient background with multiple layers
-    DrawRectangleGradientV(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, Fade(LIGHTGRAY, 0.4f));
-    DrawRectangleGradientH(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(BLUE, 0.05f), Fade(RED, 0.05f));
-    DrawRectangleGradientV(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Fade(RED, 0.1f), Fade(LIGHTGRAY, 0.2f));
-    // Draw decorative corners with Ludo colors and gradient effect
-    int cornerSize = 250;
-    int borderThickness = 4;
+    // Draw background
+    DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
     
-    // Top-left corner (Red)
-    DrawRectangleGradientH(0, 0, cornerSize, cornerSize, RED, Fade(RED, 0.1f));
-    DrawRectangleLinesEx((Rectangle){0, 0, cornerSize, cornerSize}, borderThickness, Fade(RED, 0.8f));
-    
-    // Top-right corner (Green) 
-    DrawRectangleGradientH(SCREEN_WIDTH - cornerSize, 0, cornerSize, cornerSize, GREEN, Fade(GREEN, 0.1f));
-    DrawRectangleLinesEx((Rectangle){SCREEN_WIDTH - cornerSize, 0, cornerSize, cornerSize}, borderThickness, Fade(GREEN, 0.8f));
-    
-    // Bottom-left corner (Blue)
-    DrawRectangleGradientH(0, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, BLUE, Fade(BLUE, 0.1f));
-    DrawRectangleLinesEx((Rectangle){0, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize}, borderThickness, Fade(BLUE, 0.8f));
-    
-    // Bottom-right corner (Yellow)
-    DrawRectangleGradientH(SCREEN_WIDTH - cornerSize, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, YELLOW, Fade(YELLOW, 0.1f));
-    DrawRectangleLinesEx((Rectangle){SCREEN_WIDTH - cornerSize, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize}, borderThickness, Fade(YELLOW, 0.8f));
+    // Draw decorative corners with Ludo colors
+    int cornerSize = 200;
+    DrawRectangle(0, 0, cornerSize, cornerSize, Fade(RED, 0.2f));
+    DrawRectangle(SCREEN_WIDTH - cornerSize, 0, cornerSize, cornerSize, Fade(GREEN, 0.2f));
+    DrawRectangle(0, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, Fade(BLUE, 0.2f));
+    DrawRectangle(SCREEN_WIDTH - cornerSize, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, Fade(YELLOW, 0.2f));
 
-    // Draw animated title with shadow and glow effect
+    // Draw title with Ludo colors
     const char* titleText[] = {"M", "U", "L", "T", "I"};
     Color titleColors[] = {RED, GREEN, YELLOW, BLUE, RED};
     int titleX = 350;
     int spacing = 120;
-    float time = GetTime() * 2;
     
     for (int i = 0; i < 5; i++) {
-        Color glowColor = Fade(titleColors[i], 0.3f + 0.2f * sinf(time + i));
-        // Draw glow effect
-        DrawTextEx(titleText[i], titleX + i * spacing + 2, 52, 120, glowColor);
-        DrawTextEx(titleText[i], titleX + i * spacing - 2, 48, 120, glowColor);
-        // Draw main text with pulsing effect
-        DrawTextEx(titleText[i], titleX + i * spacing, 50, 120, 
-                  Fade(titleColors[i], 0.8f + 0.2f * sinf(time + i)));
+        Color shadowColor = Fade(titleColors[i], 0.3f);
+        // Draw shadow
+        DrawTextEx(titleText[i], titleX + i * spacing + 4, 54, 120, shadowColor);
+        // Draw main text
+        DrawTextEx(titleText[i], titleX + i * spacing, 50, 120, titleColors[i]);
     }
 
-    // Draw "LUDO" with animated gradient background
+    // Draw "LUDO" with gradient background
     Rectangle ludoBox = {350, 170, 500, 120};
     DrawRectangleGradientH(ludoBox.x, ludoBox.y, ludoBox.width, ludoBox.height, 
-                          Fade(BLUE, 0.2f + 0.1f * sinf(time)), 
-                          Fade(RED, 0.2f + 0.1f * sinf(time)));
-    DrawRectangleLinesEx(ludoBox, 4, Fade(DARKGRAY, 0.8f + 0.2f * sinf(time)));
+                          Fade(BLUE, 0.2f), Fade(RED, 0.2f));
+    DrawRectangleLinesEx(ludoBox, 3, DARKGRAY);
     Vector2 ludoSize = MeasureTextEx(gameFont, "LUDO", 120, 1);
-    DrawTextEx("LUDO", ludoBox.x + (ludoBox.width - ludoSize.x)/2, ludoBox.y + 10, 120, 
-               Fade(DARKGRAY, 0.8f + 0.2f * sinf(time)));
+    DrawTextEx("LUDO", ludoBox.x + (ludoBox.width - ludoSize.x)/2, ludoBox.y + 10, 120, DARKGRAY);
 
-    // Draw subtitle with animated decorative lines
-    float lineWidth = 2 + sinf(time) * 1;
-    DrawLineEx((Vector2){300, 320}, (Vector2){900, 320}, lineWidth, LIGHTGRAY);
-    DrawTextEx("A Multithreaded Board Game", 400, 330, 30, 
-               Fade(DARKGRAY, 0.8f + 0.2f * sinf(time)));
-    DrawLineEx((Vector2){300, 370}, (Vector2){900, 370}, lineWidth, LIGHTGRAY);
+    // Draw subtitle with decorative line
+    DrawLineEx((Vector2){300, 320}, (Vector2){900, 320}, 2, LIGHTGRAY);
+    DrawTextEx("A Multithreaded Board Game", 400, 330, 30, DARKGRAY);
+    DrawLineEx((Vector2){300, 370}, (Vector2){900, 370}, 2, LIGHTGRAY);
 
-    // Draw token selection area with glowing effect
+    // Draw token selection area with better styling
     Rectangle tokenBox = {350, 400, 500, 150};
-    DrawRectangleGradientV(tokenBox.x, tokenBox.y, tokenBox.width, tokenBox.height,
-                          Fade(LIGHTGRAY, 0.4f + 0.1f * sinf(time)),
-                          Fade(WHITE, 0.4f + 0.1f * sinf(time)));
-    DrawRectangleLinesEx(tokenBox, 3, Fade(DARKGRAY, 0.8f + 0.2f * sinf(time)));
+    DrawRectangle(tokenBox.x, tokenBox.y, tokenBox.width, tokenBox.height, Fade(LIGHTGRAY, 0.3f));
+    DrawRectangleLinesEx(tokenBox, 2, DARKGRAY);
     
-    DrawTextEx("Select Number of Players", tokenBox.x + 80, tokenBox.y + 20, 35, 
-               Fade(DARKGRAY, 0.8f + 0.2f * sinf(time)));
+    DrawTextEx("Select Number of Tokens", tokenBox.x + 100, tokenBox.y + 20, 35, DARKGRAY);
     
-    // Draw animated token number display
+    // Draw token number buttons
     if (numTokens != -1) {
-        DrawCircleGradient(600, tokenBox.y + 100, 45,
-                          Fade(DARKGRAY, 0.3f + 0.1f * sinf(time)),
-                          Fade(WHITE, 0.3f + 0.1f * sinf(time)));
-        DrawTextEx(TextFormat("%d", numTokens), 590, tokenBox.y + 80, 50, 
-                  Fade(MAROON, 0.8f + 0.2f * sinf(time)));
+        DrawCircle(600, tokenBox.y + 100, 40, Fade(DARKGRAY, 0.2f));
+        DrawTextEx(TextFormat("%d", numTokens), 590, tokenBox.y + 80, 50, MAROON);
     }
 
-    DrawTextEx("Press 1-4 to select players", tokenBox.x + 120, tokenBox.y + 120, 25,
-               Fade(GRAY, 0.8f + 0.2f * sinf(time)));
+    // Draw token selection hint
+    DrawTextEx("Press 1-4 to select", tokenBox.x + 150, tokenBox.y + 120, 25, GRAY);
 
     // Handle token selection
     if (IsKeyPressed('1')) numTokens = 1;
@@ -349,28 +305,24 @@ void Game::DrawStartScreen() {
     if (IsKeyPressed('3')) numTokens = 3;
     if (IsKeyPressed('4')) numTokens = 4;
 
-    // Draw animated start button
+    // Draw start button with animation
     Rectangle startBtn = {450, 600, 300, 80};
     Color btnColor = CheckCollisionPointRec(GetMousePosition(), startBtn) ? 
-                    Fade(GREEN, 0.8f + 0.2f * sinf(time)) : 
-                    Fade(GREEN, 0.6f + 0.2f * sinf(time));
+                    Fade(GREEN, 0.7f) : Fade(GREEN, 0.5f);
     
-    DrawRectangleGradientH(startBtn.x, startBtn.y, startBtn.width, startBtn.height,
-                          btnColor, Fade(DARKGREEN, 0.7f + 0.2f * sinf(time)));
-    DrawRectangleLinesEx(startBtn, 3, DARKGREEN);
+    DrawRectangle(startBtn.x, startBtn.y, startBtn.width, startBtn.height, btnColor);
+    DrawRectangleLinesEx(startBtn, 2, DARKGREEN);
     
     Vector2 startSize = MeasureTextEx(gameFont, "START", 40, 1);
     DrawTextEx("START", 
               startBtn.x + (startBtn.width - startSize.x)/2, 
               startBtn.y + (startBtn.height - startSize.y)/2, 
-              40, Fade(WHITE, 0.9f + 0.1f * sinf(time)));
+              40, WHITE);
 
-    // Draw credits with gradient effect
-    DrawRectangleGradientH(0, SCREEN_HEIGHT - 40, SCREEN_WIDTH, 40, 
-                          Fade(DARKGRAY, 0.2f), Fade(DARKGRAY, 0.1f));
+    // Draw credits with style
+    DrawRectangle(0, SCREEN_HEIGHT - 40, SCREEN_WIDTH, 40, Fade(DARKGRAY, 0.1f));
     DrawTextEx("Created by:", 20, SCREEN_HEIGHT - 30, 20, DARKGRAY);
-    DrawTextEx("Shuja, Amna & Samra", 120, SCREEN_HEIGHT - 30, 20, 
-               Fade(MAROON, 0.8f + 0.2f * sinf(time)));
+    DrawTextEx("Amna , Shuja ,Samra", 120, SCREEN_HEIGHT - 30, 20, MAROON);
 
     // Handle start button click
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -389,102 +341,92 @@ void Game::DrawStartScreen() {
 
 /**
  * @brief Draws the game win screen
- * Displays winners and rankings with animations
+ * Displays winners and their rankings
  */
 void Game::DrawWinScreen() {
-    // Draw background with a subtle pattern
+    // Draw background
     DrawRectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, WHITE);
-    for (int i = 0; i < SCREEN_WIDTH; i += 40) {
-        for (int j = 0; j < SCREEN_HEIGHT; j += 40) {
-            DrawRectangle(i, j, 20, 20, Fade(GOLD, 0.05f));
-        }
-    }
     
-    // Draw decorative corners with gradient effect
+    // Draw decorative corners with Ludo colors
     int cornerSize = 200;
-    DrawRectangleGradientH(0, 0, cornerSize, cornerSize, Fade(GOLD, 0.3f), Fade(ORANGE, 0.2f));
-    DrawRectangleGradientH(SCREEN_WIDTH - cornerSize, 0, cornerSize, cornerSize, Fade(ORANGE, 0.2f), Fade(GOLD, 0.3f));
-    DrawRectangleGradientV(0, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, Fade(GOLD, 0.3f), Fade(ORANGE, 0.2f));
-    DrawRectangleGradientV(SCREEN_WIDTH - cornerSize, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, Fade(ORANGE, 0.2f), Fade(GOLD, 0.3f));
+    DrawRectangle(0, 0, cornerSize, cornerSize, Fade(GOLD, 0.2f));
+    DrawRectangle(SCREEN_WIDTH - cornerSize, 0, cornerSize, cornerSize, Fade(GOLD, 0.2f));
+    DrawRectangle(0, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, Fade(GOLD, 0.2f));
+    DrawRectangle(SCREEN_WIDTH - cornerSize, SCREEN_HEIGHT - cornerSize, cornerSize, cornerSize, Fade(GOLD, 0.2f));
 
-    // Draw title with enhanced styling
+    // Draw title with gradient effect
     Rectangle titleBox = {300, 30, 600, 120};
     DrawRectangleGradientH(titleBox.x, titleBox.y, titleBox.width, titleBox.height, 
-                          Fade(GOLD, 0.4f), Fade(ORANGE, 0.4f));
-    DrawRectangleLinesEx(titleBox, 4, GOLD);
-    DrawRectangleLinesEx({titleBox.x + 4, titleBox.y + 4, titleBox.width - 8, titleBox.height - 8}, 2, WHITE);
+                          Fade(GOLD, 0.3f), Fade(ORANGE, 0.3f));
+    DrawRectangleLinesEx(titleBox, 3, GOLD);
+
+    // Animate title color
+    float time = GetTime() * 2;
+    Color titleColor = {
+        (unsigned char)(255 * (0.7f + 0.3f * sin(time))),
+        (unsigned char)(215 * (0.7f + 0.3f * sin(time))),
+        0,
+        255
+    };
     
     Vector2 gameOverSize = MeasureTextEx(gameFont, "GAME OVER!", 100, 1);
     DrawTextEx("GAME OVER!", 
               titleBox.x + (titleBox.width - gameOverSize.x)/2, 
               titleBox.y + (titleBox.height - gameOverSize.y)/2, 
-              100, GOLD);
+              100, titleColor);
 
-    // Draw "WINNERS" section with enhanced decoration
-    DrawLineEx((Vector2){250, 180}, (Vector2){950, 180}, 5, GOLD);
-    DrawLineEx((Vector2){250, 182}, (Vector2){950, 182}, 2, WHITE);
+    // Draw "WINNERS" text with decorative lines
+    DrawLineEx((Vector2){300, 180}, (Vector2){900, 180}, 3, GOLD);
     Vector2 winnersSize = MeasureTextEx(gameFont, "WINNERS", 60, 1);
-    DrawTextEx("WINNERS", (SCREEN_WIDTH - winnersSize.x)/2, 200, 60, GOLD);
-    DrawLineEx((Vector2){250, 280}, (Vector2){950, 280}, 5, GOLD);
-    DrawLineEx((Vector2){250, 282}, (Vector2){950, 282}, 2, WHITE);
+    DrawTextEx("WINNERS", (SCREEN_WIDTH - winnersSize.x)/2, 200, 60, DARKGRAY);
+    DrawLineEx((Vector2){300, 280}, (Vector2){900, 280}, 3, GOLD);
 
-    // Draw winners list with enhanced visual hierarchy
+    // Draw winners list with enhanced styling
     const char* playerNames[] = {"RED", "GREEN", "YELLOW", "BLUE"};
     Color playerColors[] = {RED, GREEN, YELLOW, BLUE};
     const char* trophies[] = {"🏆", "🥈", "🥉", "4th"};
     
     for (int i = 0; i < winners.size() && i < 4; i++) {
         float yPos = 320 + (i * 120);
+        float time = GetTime() * 2;
+        float scale = 1.0f + 0.1f * sin(time + i);
         int index = winners[i] - 1;
         Color color = playerColors[index];
         const char* name = playerNames[index];
         
-        // Draw winner box with double border effect
+        // Draw winner box
         Rectangle winnerBox = {300, yPos, 600, 100};
-        DrawRectangleGradientH(winnerBox.x, winnerBox.y, winnerBox.width, winnerBox.height, 
-                             Fade(color, 0.15f), Fade(color, 0.05f));
-        DrawRectangleLinesEx(winnerBox, 3, Fade(color, 0.7f));
-        DrawRectangleLinesEx({winnerBox.x + 3, winnerBox.y + 3, winnerBox.width - 6, winnerBox.height - 6}, 
-                            1, Fade(WHITE, 0.5f));
+        DrawRectangle(winnerBox.x, winnerBox.y, winnerBox.width, winnerBox.height, 
+                     Fade(color, 0.1f));
+        DrawRectangleLinesEx(winnerBox, 2, Fade(color, 0.5f));
         
-        // Draw position indicator with enhanced styling
-        DrawCircle(350, yPos + 50, 35, Fade(color, 0.3f));
-        DrawCircleLines(350, yPos + 50, 35, color);
-        DrawCircleLines(350, yPos + 50, 33, Fade(WHITE, 0.5f));
+        // Draw position circle
+        DrawCircle(350, yPos + 50, 35 * scale, Fade(color, 0.2f));
+        DrawCircleLines(350, yPos + 50, 35 * scale, color);
         
-        // Draw position number and trophy with shadow effect
+        // Draw position number and trophy
         if (i == 0) {
-            DrawTextEx(trophies[i], 332, yPos + 32, 40, Fade(BLACK, 0.2f));
             DrawTextEx(trophies[i], 330, yPos + 30, 40, GOLD);
         } else {
-            DrawTextEx(trophies[i], 337, yPos + 32, 40, Fade(BLACK, 0.2f));
             DrawTextEx(trophies[i], 335, yPos + 30, 40, color);
         }
         
-        // Draw player name with shadow effect
-        DrawTextEx(name, 452, yPos + 37, 50, Fade(BLACK, 0.2f));
+        // Draw player name with trophy
         DrawTextEx(name, 450, yPos + 35, 50, color);
         
-        // Draw winner badge
-        if (i == 0) {
-            DrawTextEx("CHAMPION!", 700, yPos + 40, 30, GOLD);
-        } else {
-            DrawTextEx("FINALIST", 700, yPos + 40, 30, Fade(color, 0.7f));
-        }
+        // Draw score or other stats if needed
+        DrawTextEx("Winner!", 700, yPos + 40, 30, Fade(color, 0.7f));
     }
 
-    // Draw return instruction with box
-    Rectangle instructBox = {400, SCREEN_HEIGHT - 70, 400, 40};
-    DrawRectangleGradientH(instructBox.x, instructBox.y, instructBox.width, instructBox.height,
-                          Fade(DARKGRAY, 0.1f), Fade(DARKGRAY, 0.2f));
-    DrawRectangleLinesEx(instructBox, 2, Fade(DARKGRAY, 0.3f));
+    // Draw return to menu hint with blinking effect
+    float blinkTime = sin(GetTime() * 3) * 0.5f + 0.5f;
     DrawTextEx("Press SPACE to return to menu", 
-              450, SCREEN_HEIGHT - 60, 
-              25, DARKGRAY);
+              450, SCREEN_HEIGHT - 50, 
+              25, Fade(DARKGRAY, blinkTime));
 }
 
 /**
- * @brief Draws the current dice value
+ * @brief Draws the current dice face
  */
 void Game::DrawDice() {
     DrawTexture(Dice[dice - 1], 990, 500, WHITE);
@@ -492,7 +434,7 @@ void Game::DrawDice() {
 
 /**
  * @brief Updates the game state
- * Handles player turns, completion checks, and game over conditions
+ * Handles player turns, movement, and game completion
  */
 void Game::Update() {
     if (screen == 2) {
@@ -503,7 +445,7 @@ void Game::Update() {
         int count = 0;
         int index = 0;
 
-        // Check and handle player completion states
+        // Handle player 1
         if (!P1.completed) P1.Start();
         else if (!FinishedThreads[0]) {
             pthread_cancel(th[0]);
@@ -514,6 +456,7 @@ void Game::Update() {
             FinishedThreads[0] = true;
         }
 
+        // Handle player 2
         if (!P2.completed) P2.Start();
         else if (!FinishedThreads[1]) {
             pthread_cancel(th[1]);
@@ -524,6 +467,7 @@ void Game::Update() {
             FinishedThreads[1] = true;
         }
 
+        // Handle player 3
         if (!P3.completed) P3.Start();
         else if (!FinishedThreads[2]) {
             pthread_cancel(th[2]);
@@ -534,6 +478,7 @@ void Game::Update() {
             FinishedThreads[2] = true;
         }
 
+        // Handle player 4
         if (!P4.completed) P4.Start();
         else if (!FinishedThreads[3]) {
             pthread_cancel(th[3]);

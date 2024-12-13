@@ -1,79 +1,85 @@
 #pragma once
 
-// - **Shuja Uddin** (22i-2553) | SE-D | FAST NUCES Islamabad
-// - **Amna Hassan** (22i-8759) | SE-D | FAST NUCES Islamabad  
-// - **Samra Saleem** (22i-2727) | SE-D | FAST NUCES Islamabad
-
 #include "Token.h"
 #include "raylib.h"
 #include <pthread.h>
 
 /**
- * @brief Class representing a player in the game
+ * @brief Class representing a player in the Ludo game
  * 
- * The Player class manages a player's state, tokens, and gameplay actions
- * in a board game implementation.
+ * The Player class manages an individual player's state, tokens, and game actions.
+ * It handles player initialization, token movement, dice rolling, and win conditions.
  */
 class Player {
 public:
-    /** @brief Unique identifier for the player */
-    int id;
-    
-    /** @brief Array of tokens owned by this player */
-    Token* tokens;
-    
-    /** @brief Color associated with this player's pieces */
-    Color color;
-    
-    /** @brief Flag indicating if player has completed the game */
-    bool completed;
-    
-    /** @brief Player's current score in the game */
-    int score;
-    
-    /** @brief Flag indicating if it's this player's turn */
-    bool isPlaying;
+    int id;                 ///< Unique identifier for the player (1-4)
+    Token* tokens;          ///< Array of tokens owned by this player
+    Color color;           ///< Player's color for visual representation
+    bool completed;        ///< Flag indicating if player has won
+    int score;            ///< Player's current score
+    bool isPlaying;       ///< Flag indicating if player is active in game
 
-    /** @brief Default constructor */
+    /**
+     * @brief Default constructor
+     * Initializes a player with default values
+     */
     Player();
-    
-    /** @brief Destructor */
+
+    /**
+     * @brief Destructor
+     * Cleans up player resources and token array
+     */
     ~Player();
-    
+
     /**
      * @brief Parameterized constructor
      * @param i Player ID
      * @param c Player color
-     * @param t Texture for player tokens
+     * @param t Token texture
      */
     Player(int i, Color c, Texture2D t);
-    
+
     /**
-     * @brief Initialize player with given parameters
-     * @param i Player ID
-     * @param c Player color
-     * @param t Texture for player tokens
+     * @brief Configures player parameters
+     * @param i Player ID to set
+     * @param c Player color to set
+     * @param t Token texture to use
      */
     void setPlayer(int i, Color c, Texture2D t);
-    
-    /** @brief Check and update player's current play state */
-    void checkPlayState();
-    
-    /** @brief Initialize player for game start */
-    void Start();
-    
-    /** @brief Allow player tokens to return to home position */
-    void allowHome();
-    
+
     /**
-     * @brief Handle token collision events
-     * @param movedToken Index of the token that moved
+     * @brief Verifies if player can continue playing
+     * Updates isPlaying flag based on token positions
+     */
+    void checkPlayState();
+
+    /**
+     * @brief Initiates player's turn
+     * Handles initial turn setup and validation
+     */
+    void Start();
+
+    /**
+     * @brief Enables tokens to move to home position
+     * Validates and permits home square movement
+     */
+    void allowHome();
+
+    /**
+     * @brief Handles token collision with other players
+     * @param movedToken Index of token that caused collision
      */
     void collision(int movedToken);
-    
-    /** @brief Execute dice roll for player's turn */
+
+    /**
+     * @brief Handles dice rolling mechanism
+     * Generates and validates dice roll result
+     */
     void rollDice();
-    
-    /** @brief Handle token movement based on dice roll */
+
+    /**
+     * @brief Processes token movement
+     * Handles token selection and movement validation
+     */
     void move();
 }; 

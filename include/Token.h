@@ -1,120 +1,73 @@
 #pragma once
-// - **Shuja Uddin** (22i-2553) | SE-D | FAST NUCES Islamabad
-// - **Amna Hassan** (22i-8759) | SE-D | FAST NUCES Islamabad  
-// - **Samra Saleem** (22i-2727) | SE-D | FAST NUCES Islamabad
-
 
 #include "raylib.h"
 #include <tuple>
 #include <semaphore.h>
 
 /**
- * @brief Class representing a game token/piece in the Ludo board game
+ * @brief Class representing an individual token in the Ludo game
  * 
- * The Token class manages individual game pieces, their positions, movement rules,
- * and state on the game board. It handles both the visual representation and logical
- * positioning of tokens.
+ * The Token class manages the state and behavior of a single game token,
+ * including its position, movement, and status on the board.
  */
 class Token {
 public:
-    /** @brief Unique identifier for the token */
-    int id;
-    
-    /** @brief Grid identifier for token position tracking */
-    int gridID;
-    
-    /** @brief Current position in the game grid as (row, column, grid number) */
-    std::tuple<int, int, int> gridPos;
-    
-    /** @brief Current pixel coordinates on screen */
-    int x, y;
-    
-    /** @brief Initial/home position pixel coordinates */
-    int initX, initY;
-    
-    /** @brief Flag indicating if token is on a safe spot */
-    bool isSafe;
-    
-    /** @brief Flag indicating if token can return home */
-    bool canGoHome;
-    
-    /** @brief Flag indicating if token has reached final position */
-    bool finished;
-    
-    /** @brief Flag indicating if token is out of starting area */
-    bool isOut;
-    
-    /** @brief Semaphore for thread-safe token operations */
-    sem_t semToken;
-    
-    /** @brief Visual texture for rendering the token */
-    Texture2D token;
+    int id;                             ///< Unique identifier for the token
+    int gridID;                         ///< Current position ID on the game grid
+    std::tuple<int, int, int> gridPos;  ///< 3D coordinates for token position (x,y,z)
+    int x, y;                           ///< Current pixel coordinates on screen
+    int initX, initY;                   ///< Initial/home position coordinates
+    bool isSafe;                        ///< Flag indicating if token is on a safe spot
+    bool canGoHome;                     ///< Flag indicating if token can enter home stretch
+    bool finished;                      ///< Flag indicating if token has reached home
+    bool isOut;                         ///< Flag indicating if token is out of starting area
+    sem_t semToken;                     ///< Semaphore for thread-safe token operations
+    Texture2D token;                    ///< Token's visual texture
 
-    /** @brief Default constructor */
-    Token();
-    
     /**
-     * @brief Sets the token's texture for rendering
-     * @param t The texture to assign to this token
+     * @brief Default constructor
+     * Initializes a token with default values
+     */
+    Token();
+
+    /**
+     * @brief Sets the token's texture
+     * @param t Texture2D object to be used for the token
      */
     void setTexture(Texture2D t);
-    
+
     /**
-     * @brief Initializes starting position based on player ID
-     * @param i Player identifier
+     * @brief Sets the token's starting position
+     * @param i Initial position identifier
      */
     void setStart(int i);
-    
-    /** @brief Updates token's grid position in game state */
-    void updateGrid();
-    
-    /** @brief Initializes token drawing parameters */
-    void drawInit();
-    
-    /** @brief Moves token out of starting area */
-    void outToken();
-    
-    /** @brief Returns token to starting area */
-    void inToken();
-    
+
     /**
-     * @brief Moves token based on dice roll
+     * @brief Updates the token's grid position
+     * Recalculates coordinates based on current grid ID
+     */
+    void updateGrid();
+
+    /**
+     * @brief Draws the token in its initial position
+     */
+    void drawInit();
+
+    /**
+     * @brief Moves token out of starting area
+     * Called when a player rolls a 6
+     */
+    void outToken();
+
+    /**
+     * @brief Returns token to starting area
+     * Called when token is captured
+     */
+    void inToken();
+
+    /**
+     * @brief Moves the token on the board
      * @param roll Number of spaces to move
      */
     void move(int roll);
-
-private:
-    /**
-     * @brief Movement validation functions
-     */
-    bool canMoveToPosition(const std::tuple<int, int, int>& newPos) const;
-    void updatePosition(int newX, int newY);
-    bool isValidMove(int roll) const;
-    void handleHomeStretch(int roll);
-    void handleNormalPath(int roll);
-    
-    /**
-     * @brief Grid-specific movement handlers for each quadrant
-     * @param r Row coordinate
-     * @param c Column coordinate
-     * @param cur Current position
-     * @param next Next position
-     */
-    void handleGrid0Movement(int r, int c, int cur, int next);
-    void handleGrid1Movement(int r, int c, int cur, int next);
-    void handleGrid2Movement(int r, int c, int cur, int next);
-    void handleGrid3Movement(int r, int c, int cur, int next);
-    
-    /**
-     * @brief Position calculation and validation helpers
-     */
-    std::tuple<int, int, int> calculateNextPosition(int roll) const;
-    bool isHomeStretchEntry(const std::tuple<int, int, int>& pos) const;
-    bool isIntersection(const std::tuple<int, int, int>& pos) const;
-    
-    /**
-     * @brief State validation methods
-     */
-    bool isValidGridPosition(const std::tuple<int, int, int>& pos) const;
-    void validateMove(int roll) const;
 }; 
